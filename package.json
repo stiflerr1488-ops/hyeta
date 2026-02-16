@@ -1,0 +1,16 @@
+{
+  "name": "hyeta-visual-editor",
+  "version": "0.1.0",
+  "description": "Desktop visual editor MVP for multipage HTML sites",
+  "main": "src/main/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "check": "node --check src/main/main.js && node --check src/main/preload.js && node --check src/renderer/app.js",
+    "release:archive": "python3 scripts/create_release_archive.py"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}
