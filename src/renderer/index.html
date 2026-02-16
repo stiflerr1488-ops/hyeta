@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hyeta Visual Editor MVP</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="toolbar">
+    <button id="openProjectBtn">Открыть папку</button>
+    <button id="openZipBtn">Открыть ZIP</button>
+    <button id="saveBtn">Сохранить (Ctrl+S)</button>
+    <button id="undoBtn">Undo</button>
+    <button id="redoBtn">Redo</button>
+    <input id="searchInput" placeholder="Поиск по проекту (Ctrl+Shift+F)" />
+    <button id="searchBtn">Найти</button>
+    <span id="status"></span>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar" id="fileTree"></aside>
+    <section class="previewPane">
+      <div class="pagePicker">
+        <label for="pageSelect">Страница:</label>
+        <select id="pageSelect"></select>
+      </div>
+      <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+    </section>
+    <aside class="properties">
+      <h3>Свойства</h3>
+      <div class="field">
+        <label>Текст</label>
+        <textarea id="textValue" rows="6"></textarea>
+      </div>
+      <div class="field">
+        <label>href</label>
+        <input id="attrHref" />
+      </div>
+      <div class="field">
+        <label>src</label>
+        <input id="attrSrc" />
+      </div>
+      <div class="field">
+        <label>alt</label>
+        <input id="attrAlt" />
+      </div>
+      <div class="field">
+        <label>title</label>
+        <input id="attrTitle" />
+      </div>
+      <button id="applyBtn">Применить к элементу</button>
+      <h4>Результаты поиска</h4>
+      <pre id="searchResults"></pre>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
