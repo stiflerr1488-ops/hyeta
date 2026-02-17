@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('editorApi', {
   openProject: () => ipcRenderer.invoke('project:open'),
   openProjectZip: () => ipcRenderer.invoke('project:open-zip'),
+  openProjectPath: (absolutePath) => ipcRenderer.invoke('project:open-path', absolutePath),
   readFile: (relativePath) => ipcRenderer.invoke('project:read-file', relativePath),
   writeFile: (relativePath, content) => ipcRenderer.invoke('project:write-file', relativePath, content),
   search: (query) => ipcRenderer.invoke('project:search', query),
@@ -10,6 +11,12 @@ contextBridge.exposeInMainWorld('editorApi', {
   pickAssetFile: async () => {
     // no native dialog in preload for now, renderer uses input type=file
     return null;
+  },
+  onProjectLoaded: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, project) => callback(project);
+    ipcRenderer.on('project:loaded', listener);
+    return () => ipcRenderer.removeListener('project:loaded', listener);
   }
 });
 // updated-all-files

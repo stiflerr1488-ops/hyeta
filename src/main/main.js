@@ -3,10 +3,13 @@ const fs = require('fs/promises');
 const path = require('path');
 const { buildProjectIndex, findInProject } = require('../shared/project-index');
 const { createExtractionDir, extractZipArchive } = require('./zip-import');
+const { isZipPath, extractZipPathFromArgv } = require('./open-zip-args');
 
 const APP_SCHEME = 'appfs';
 let currentProjectRoot = null;
 let appMenu = null;
+let pendingOpenZipPath = null;
+
 
 function normalizePath(projectRoot, relativePath) {
   const resolved = path.resolve(projectRoot, relativePath);
@@ -27,6 +30,38 @@ function triggerRendererAction(elementId) {
   win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(elementId)})?.click();`);
 }
 
+
+
+async function handleOpenProjectFromMenu() {
+  const win = getActiveWindow();
+  if (!win || win.isDestroyed()) return;
+
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Выберите папку с сайтом',
+    properties: ['openDirectory']
+  });
+
+  if (result.canceled || !result.filePaths[0]) return;
+
+  await openProjectInWindow(result.filePaths[0]);
+}
+
+async function handleOpenZipFromMenu() {
+  const win = getActiveWindow();
+  if (!win || win.isDestroyed()) return;
+
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Выберите ZIP-архив с сайтом',
+    buttonLabel: 'Открыть архив',
+    properties: ['openFile'],
+    filters: [{ name: 'ZIP-архив', extensions: ['zip'] }]
+  });
+
+  if (result.canceled || !result.filePaths[0]) return;
+
+  await openZipPathInWindow(result.filePaths[0]);
+}
+
 function buildApplicationMenu() {
   const template = [
     {
@@ -35,12 +70,12 @@ function buildApplicationMenu() {
         {
           label: 'Открыть папку с сайтом',
           accelerator: 'CmdOrCtrl+O',
-          click: () => triggerRendererAction('openProjectBtn')
+          click: () => handleOpenProjectFromMenu()
         },
         {
           label: 'Открыть ZIP-архив',
           accelerator: 'CmdOrCtrl+Shift+O',
-          click: () => triggerRendererAction('openZipBtn')
+          click: () => handleOpenZipFromMenu()
         },
         { type: 'separator' },
         {
@@ -138,6 +173,53 @@ async function readUtf8(absolutePath) {
   return fs.readFile(absolutePath, 'utf8');
 }
 
+async function openDirectoryProject(projectRoot) {
+  currentProjectRoot = projectRoot;
+  const index = await buildProjectIndex(currentProjectRoot);
+  return {
+    projectRoot: currentProjectRoot,
+    ...index
+  };
+}
+
+async function openZipProject(zipFilePath) {
+  const extractionDir = createExtractionDir(app.getPath('userData'), zipFilePath);
+  await extractZipArchive(zipFilePath, extractionDir);
+
+  currentProjectRoot = extractionDir;
+  const index = await buildProjectIndex(currentProjectRoot);
+  return {
+    projectRoot: currentProjectRoot,
+    sourceZip: zipFilePath,
+    ...index
+  };
+}
+
+function notifyProjectLoaded(project) {
+  const win = getActiveWindow();
+  if (!win || win.isDestroyed()) return;
+  win.webContents.send('project:loaded', project);
+}
+
+async function openProjectInWindow(projectRoot) {
+  const project = await openDirectoryProject(projectRoot);
+  notifyProjectLoaded(project);
+  return project;
+}
+
+async function openZipPathInWindow(zipFilePath) {
+  if (!isZipPath(zipFilePath)) return;
+  const win = getActiveWindow();
+  if (!win || win.isDestroyed()) {
+    pendingOpenZipPath = zipFilePath;
+    return;
+  }
+
+  const project = await openZipProject(zipFilePath);
+  notifyProjectLoaded(project);
+  return project;
+}
+
 async function createMainWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -216,12 +298,7 @@ ipcMain.handle('project:open', async (event) => {
     return null;
   }
 
-  currentProjectRoot = result.filePaths[0];
-  const index = await buildProjectIndex(currentProjectRoot);
-  return {
-    projectRoot: currentProjectRoot,
-    ...index
-  };
+  return openDirectoryProject(result.filePaths[0]);
 });
 
 
@@ -238,17 +315,25 @@ ipcMain.handle('project:open-zip', async (event) => {
     return null;
   }
 
-  const zipFilePath = result.filePaths[0];
-  const extractionDir = createExtractionDir(app.getPath('userData'), zipFilePath);
-  await extractZipArchive(zipFilePath, extractionDir);
+  return openZipProject(result.filePaths[0]);
+});
 
-  currentProjectRoot = extractionDir;
-  const index = await buildProjectIndex(currentProjectRoot);
-  return {
-    projectRoot: currentProjectRoot,
-    sourceZip: zipFilePath,
-    ...index
-  };
+
+ipcMain.handle('project:open-path', async (_event, absolutePath) => {
+  if (!absolutePath || typeof absolutePath !== 'string') {
+    throw new Error('Некорректный путь файла/папки');
+  }
+
+  if (isZipPath(absolutePath)) {
+    return openZipProject(absolutePath);
+  }
+
+  const stats = await fs.stat(absolutePath);
+  if (stats.isDirectory()) {
+    return openDirectoryProject(absolutePath);
+  }
+
+  throw new Error('Поддерживаются только ZIP-файлы или папки проекта');
 });
 
 ipcMain.handle('project:read-file', async (_event, relativePath) => {
@@ -281,7 +366,44 @@ app.whenReady().then(async () => {
   registerAppFsProtocol();
   lockDownPreviewNetwork();
   await createMainWindow();
+
+  const initialZipPath = pendingOpenZipPath || extractZipPathFromArgv(process.argv.slice(1));
+  if (initialZipPath) {
+    pendingOpenZipPath = null;
+    await openZipPathInWindow(initialZipPath);
+  }
 });
+
+app.on('open-file', async (event, filePath) => {
+  event.preventDefault();
+  if (!isZipPath(filePath)) return;
+
+  if (!app.isReady()) {
+    pendingOpenZipPath = filePath;
+    return;
+  }
+
+  await openZipPathInWindow(filePath);
+});
+
+const singleInstanceLock = app.requestSingleInstanceLock();
+if (!singleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', async (_event, argv) => {
+    const zipPath = extractZipPathFromArgv(argv.slice(1));
+    if (!zipPath) return;
+
+    const win = getActiveWindow();
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+
+    await openZipPathInWindow(zipPath);
+  });
+}
+
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

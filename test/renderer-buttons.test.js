@@ -79,6 +79,7 @@ test('toolbar buttons are wired and invoke expected editor API calls', async () 
       apiCalls.openProjectZip += 1;
       return project;
     },
+    openProjectPath: async () => project,
     readFile: async () => {
       apiCalls.readFile += 1;
       return '<!doctype html><html><head></head><body>ok</body></html>';
@@ -93,6 +94,7 @@ test('toolbar buttons are wired and invoke expected editor API calls', async () 
     },
     replaceAsset: async () => ({ ok: true }),
     pickAssetFile: async () => null,
+    onProjectLoaded: () => () => {},
   };
 
   global.document = fixture.document;

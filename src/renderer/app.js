@@ -234,6 +234,47 @@ async function loadProjectData(project) {
   }
 }
 
+
+if (typeof window.editorApi.onProjectLoaded === 'function') {
+  window.editorApi.onProjectLoaded(async (project) => {
+    await loadProjectData(project);
+  });
+}
+
+
+function resolveDroppedPath(dataTransfer) {
+  if (!dataTransfer?.files?.length) return null;
+  const first = dataTransfer.files[0];
+  return first?.path || null;
+}
+
+async function handleDroppedPath(absolutePath) {
+  if (!absolutePath || typeof window.editorApi.openProjectPath !== 'function') {
+    return;
+  }
+
+  try {
+    const project = await window.editorApi.openProjectPath(absolutePath);
+    await loadProjectData(project);
+  } catch (error) {
+    setStatus(`Не удалось открыть: ${error?.message || 'неизвестная ошибка'}`);
+  }
+}
+
+window.addEventListener('dragover', (event) => {
+  const droppedPath = resolveDroppedPath(event.dataTransfer);
+  if (!droppedPath) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+});
+
+window.addEventListener('drop', async (event) => {
+  const droppedPath = resolveDroppedPath(event.dataTransfer);
+  if (!droppedPath) return;
+  event.preventDefault();
+  await handleDroppedPath(droppedPath);
+});
+
 refs.openProjectBtn.onclick = async () => {
   const project = await window.editorApi.openProject();
   await loadProjectData(project);
