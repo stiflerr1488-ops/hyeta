@@ -13,36 +13,26 @@ if errorlevel 1 (
 
 if not exist node_modules (
   echo node_modules not found. Running npm install first...
-  npm install
-  set EXIT_CODE=%ERRORLEVEL%
-  if not "%EXIT_CODE%"=="0" (
-    echo.
-    echo [ERROR] npm install failed with exit code %EXIT_CODE%.
-    pause
-    exit /b %EXIT_CODE%
-  )
 ) else (
   echo node_modules found. Running npm install check/update...
-  npm install
-  set EXIT_CODE=%ERRORLEVEL%
-  if not "%EXIT_CODE%"=="0" (
-    echo.
-    echo [ERROR] npm install failed with exit code %EXIT_CODE%.
-    pause
-    exit /b %EXIT_CODE%
-  )
+)
+
+npm install
+if errorlevel 1 (
+  echo.
+  echo [ERROR] npm install failed with exit code %ERRORLEVEL%.
+  pause
+  exit /b %ERRORLEVEL%
 )
 
 echo.
 echo Building fresh portable version...
 node scripts\build-portable.js
-set EXIT_CODE=%ERRORLEVEL%
-
-if not "%EXIT_CODE%"=="0" (
+if errorlevel 1 (
   echo.
-  echo [ERROR] Portable build failed with exit code %EXIT_CODE%.
+  echo [ERROR] Portable build failed with exit code %ERRORLEVEL%.
   pause
-  exit /b %EXIT_CODE%
+  exit /b %ERRORLEVEL%
 )
 
 echo.
