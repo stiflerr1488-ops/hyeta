@@ -7,8 +7,8 @@ const { buildProjectIndex, findInProject } = require('../src/shared/project-inde
 
 async function withTempProject(run) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'hyeta-'));
-  await fs.writeFile(path.join(dir, 'index.html'), '<h1>Hello CTA</h1>', 'utf8');
-  await fs.writeFile(path.join(dir, 'about.html'), '<p>Case study</p>', 'utf8');
+  await fs.writeFile(path.join(dir, 'index.html'), '<h1>Привет CTA</h1>', 'utf8');
+  await fs.writeFile(path.join(dir, 'about.html'), '<p>Кейс</p>', 'utf8');
   await fs.writeFile(path.join(dir, 'styles.css'), '.cta{color:red}', 'utf8');
   await fs.mkdir(path.join(dir, 'assets'));
   await fs.writeFile(path.join(dir, 'assets', 'logo.svg'), '<svg/>', 'utf8');
@@ -19,7 +19,7 @@ async function withTempProject(run) {
   }
 }
 
-test('buildProjectIndex returns html pages and tree', async () => {
+test('buildProjectIndex возвращает HTML-страницы и дерево', async () => {
   await withTempProject(async (dir) => {
     const index = await buildProjectIndex(dir);
     assert.deepEqual(index.htmlPages.sort(), ['about.html', 'index.html']);
@@ -27,7 +27,7 @@ test('buildProjectIndex returns html pages and tree', async () => {
   });
 });
 
-test('findInProject finds text occurrences', async () => {
+test('findInProject находит текстовые вхождения', async () => {
   await withTempProject(async (dir) => {
     const results = await findInProject(dir, 'cta');
     assert.ok(results.some((r) => r.path === 'index.html'));

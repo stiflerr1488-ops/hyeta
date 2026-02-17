@@ -10,7 +10,7 @@ let currentProjectRoot = null;
 function normalizePath(projectRoot, relativePath) {
   const resolved = path.resolve(projectRoot, relativePath);
   if (!resolved.startsWith(path.resolve(projectRoot))) {
-    throw new Error('Path escapes project root');
+    throw new Error('Путь выходит за пределы корня проекта');
   }
   return resolved;
 }
@@ -38,7 +38,7 @@ async function createMainWindow() {
 function registerAppFsProtocol() {
   protocol.handle(APP_SCHEME, async (request) => {
     if (!currentProjectRoot) {
-      return new Response('No project loaded', { status: 400 });
+      return new Response('Проект не загружен', { status: 400 });
     }
 
     const url = new URL(request.url);
@@ -70,7 +70,7 @@ function registerAppFsProtocol() {
         }
       });
     } catch {
-      return new Response('Not found', { status: 404 });
+      return new Response('Не найдено', { status: 404 });
     }
   });
 }
@@ -104,7 +104,7 @@ ipcMain.handle('project:open', async () => {
 ipcMain.handle('project:open-zip', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
-    filters: [{ name: 'ZIP archive', extensions: ['zip'] }]
+    filters: [{ name: 'ZIP-архив', extensions: ['zip'] }]
   });
 
   if (result.canceled || !result.filePaths[0]) {
@@ -125,25 +125,25 @@ ipcMain.handle('project:open-zip', async () => {
 });
 
 ipcMain.handle('project:read-file', async (_event, relativePath) => {
-  if (!currentProjectRoot) throw new Error('Project not loaded');
+  if (!currentProjectRoot) throw new Error('Проект не загружен');
   return readUtf8(normalizePath(currentProjectRoot, relativePath));
 });
 
 ipcMain.handle('project:write-file', async (_event, relativePath, content) => {
-  if (!currentProjectRoot) throw new Error('Project not loaded');
+  if (!currentProjectRoot) throw new Error('Проект не загружен');
   await fs.writeFile(normalizePath(currentProjectRoot, relativePath), content, 'utf8');
   return { ok: true };
 });
 
 ipcMain.handle('project:replace-asset', async (_event, { targetRelativePath, sourceAbsolutePath }) => {
-  if (!currentProjectRoot) throw new Error('Project not loaded');
+  if (!currentProjectRoot) throw new Error('Проект не загружен');
   const destination = normalizePath(currentProjectRoot, targetRelativePath);
   await fs.copyFile(sourceAbsolutePath, destination);
   return { ok: true };
 });
 
 ipcMain.handle('project:search', async (_event, query) => {
-  if (!currentProjectRoot) throw new Error('Project not loaded');
+  if (!currentProjectRoot) throw new Error('Проект не загружен');
   if (!query || !query.trim()) return [];
   return findInProject(currentProjectRoot, query.trim());
 });
