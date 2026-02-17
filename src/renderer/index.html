@@ -12,6 +12,7 @@
       <strong>Hyeta</strong>
       <span>Визуальный редактор сайта</span>
     </div>
+    <div class="projectBadge" id="projectBadge">Проект не выбран</div>
     <button id="openProjectBtn">Открыть папку с сайтом</button>
     <button id="openZipBtn">Открыть ZIP-архив</button>
     <button id="saveBtn">Сохранить (Ctrl+S)</button>
@@ -23,7 +24,11 @@
   </header>
 
   <main class="layout">
-    <aside class="sidebar" id="fileTree"></aside>
+    <aside class="sidebar">
+      <h3>Файлы проекта</h3>
+      <p class="sidebarHint">Выберите HTML-файл, чтобы открыть его в предпросмотре.</p>
+      <div id="fileTree"></div>
+    </aside>
     <section class="previewPane">
       <div class="helperCard">
         <h3>Как открыть свой сайт</h3>

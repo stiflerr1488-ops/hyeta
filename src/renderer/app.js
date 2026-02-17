@@ -25,7 +25,8 @@ const refs = {
   status: document.getElementById('status'),
   searchInput: document.getElementById('searchInput'),
   searchBtn: document.getElementById('searchBtn'),
-  searchResults: document.getElementById('searchResults')
+  searchResults: document.getElementById('searchResults'),
+  projectBadge: document.getElementById('projectBadge')
 };
 
 function setStatus(text) {
@@ -223,6 +224,11 @@ async function loadProjectData(project) {
     await loadPage(project.htmlPages[0]);
   }
 
+  const sourceLabel = project.sourceZip
+    ? `ZIP: ${project.sourceZip.split(/[\\/]/).pop()}`
+    : `Папка: ${project.projectRoot.split(/[\\/]/).pop()}`;
+  refs.projectBadge.textContent = sourceLabel;
+
   if (project.sourceZip) {
     setStatus(`ZIP распакован: ${project.sourceZip}`);
   }
@@ -269,4 +275,4 @@ window.addEventListener('keydown', (event) => {
 });
 // updated-all-files
 
-setStatus('Откройте папку или ZIP-архив с вашим сайтом, чтобы начать работу.');
+setStatus('Интерфейс на русском. Откройте папку или ZIP-архив с вашим сайтом, чтобы начать работу.');

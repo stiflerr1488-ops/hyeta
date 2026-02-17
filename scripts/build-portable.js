@@ -6,7 +6,6 @@ const { spawnSync } = require('node:child_process');
 const rootDir = path.resolve(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
 const portablePattern = /^hyeta-visual-editor .*\.exe$/i;
-const buildArgs = ['electron-builder', '--win', 'portable', '--x64'];
 
 function runCommand(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -36,33 +35,48 @@ function listPortableFiles(directory) {
 
 function removePortableFiles(files) {
   for (const filePath of files) {
-    fs.rmSync(filePath, { force: true });
-    console.log(`Removed old portable build: ${path.basename(filePath)}`);
+    try {
+      fs.rmSync(filePath, { force: true });
+      console.log(`Removed old portable build: ${path.basename(filePath)}`);
+    } catch (error) {
+      console.warn(`Could not delete old portable file ${path.basename(filePath)}: ${error.message}`);
+      console.warn('Close the running .exe and retry the build.');
+    }
   }
 }
 
-function buildPortable() {
-  const npxResult = runCommand('npx', buildArgs);
-  if (npxResult.ok) {
-    return;
-  }
-
-  if (npxResult.error) {
-    console.warn(`npx failed to start: ${npxResult.error.message}`);
-  }
-
-  console.warn('Trying local electron-builder binary...');
+function runLocalBuilder() {
   const localBuilder = process.platform === 'win32'
     ? path.join(rootDir, 'node_modules', '.bin', 'electron-builder.cmd')
     : path.join(rootDir, 'node_modules', '.bin', 'electron-builder');
-  const localResult = runCommand(localBuilder, ['--win', 'portable', '--x64']);
 
-  if (!localResult.ok) {
-    if (localResult.error) {
-      throw localResult.error;
+  if (!fs.existsSync(localBuilder)) {
+    return { ok: false, status: 1 };
+  }
+
+  return runCommand(localBuilder, ['--win', 'portable', '--x64']);
+}
+
+function buildPortable() {
+  console.log('Building portable executable (electron-builder --win portable --x64)...');
+
+  const localResult = runLocalBuilder();
+  if (localResult.ok) {
+    return;
+  }
+
+  if (localResult.error) {
+    console.warn(`Local electron-builder failed to start: ${localResult.error.message}`);
+  } else {
+    console.warn('Local electron-builder failed. Trying npx fallback...');
+  }
+
+  const npxResult = runCommand('npx', ['electron-builder', '--win', 'portable', '--x64']);
+  if (!npxResult.ok) {
+    if (npxResult.error) {
+      throw npxResult.error;
     }
-
-    process.exit(localResult.status);
+    process.exit(npxResult.status);
   }
 }
 
@@ -80,10 +94,21 @@ function movePortableToRoot() {
     .sort((a, b) => b.mtimeMs - a.mtimeMs)[0].filePath;
 
   const targetPath = path.join(rootDir, path.basename(latestPortable));
-  fs.renameSync(latestPortable, targetPath);
+
+  fs.copyFileSync(latestPortable, targetPath);
+  fs.rmSync(latestPortable, { force: true });
   console.log(`Portable build moved to project root: ${path.basename(targetPath)}`);
 }
 
-removePortableFiles([...listPortableFiles(distDir), ...listPortableFiles(rootDir)]);
-buildPortable();
-movePortableToRoot();
+function main() {
+  removePortableFiles([...listPortableFiles(distDir), ...listPortableFiles(rootDir)]);
+  buildPortable();
+  movePortableToRoot();
+}
+
+try {
+  main();
+} catch (error) {
+  console.error(`Portable build script failed: ${error.message}`);
+  process.exit(1);
+}
