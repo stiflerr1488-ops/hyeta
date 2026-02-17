@@ -142,6 +142,11 @@
 - Запустите `build-portable.bat` двойным кликом.
 - Скрипт проверит Node.js, удалит старый portable `.exe`, соберёт новый, переместит его в корень проекта и оставит окно консоли открытым с результатом.
 
+#### Быстрые bat-файлы в корне проекта
+- `npm-install.bat` — запускает `npm install` двойным кликом.
+- `build-portable-ready.bat` — делает `npm install`, затем сразу запускает portable-сборку.
+- После `build-portable-ready.bat` итоговый portable `.exe` лежит в корне проекта рядом с bat-файлами.
+
 ### Собрать оба варианта сразу
 ```bash
 npm run build:win:all
