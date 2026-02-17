@@ -6,6 +6,7 @@ const { createExtractionDir, extractZipArchive } = require('./zip-import');
 
 const APP_SCHEME = 'appfs';
 let currentProjectRoot = null;
+let appMenu = null;
 
 function normalizePath(projectRoot, relativePath) {
   const resolved = path.resolve(projectRoot, relativePath);
@@ -26,7 +27,7 @@ function triggerRendererAction(elementId) {
   win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(elementId)})?.click();`);
 }
 
-function registerApplicationMenu() {
+function buildApplicationMenu() {
   const template = [
     {
       label: 'Файл',
@@ -115,7 +116,22 @@ function registerApplicationMenu() {
     });
   }
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  return Menu.buildFromTemplate(template);
+}
+
+function registerApplicationMenu() {
+  appMenu = buildApplicationMenu();
+  Menu.setApplicationMenu(appMenu);
+}
+
+function applyWindowMenu(win) {
+  if (!win || win.isDestroyed()) return;
+  if (!appMenu) {
+    appMenu = buildApplicationMenu();
+  }
+
+  win.setMenu(appMenu);
+  win.setMenuBarVisibility(true);
 }
 
 async function readUtf8(absolutePath) {
@@ -136,8 +152,9 @@ async function createMainWindow() {
     }
   });
 
+  applyWindowMenu(win);
   await win.loadFile(path.join(__dirname, '../renderer/index.html'));
-  registerApplicationMenu(win);
+  applyWindowMenu(win);
 }
 
 function registerAppFsProtocol() {
