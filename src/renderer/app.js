@@ -191,10 +191,12 @@ function redo() {
 
 async function runProjectSearch() {
   const results = await window.editorApi.search(refs.searchInput.value);
-  refs.searchResults.textContent = results
-    .slice(0, 200)
-    .map((r) => `${r.path}:${r.line}  ${r.snippet}`)
-    .join('\n');
+  refs.searchResults.textContent = results.length
+    ? results
+        .slice(0, 200)
+        .map((r) => `${r.path}:${r.line}  ${r.snippet}`)
+        .join('\n')
+    : 'Ничего не найдено';
 }
 
 window.addEventListener('message', (event) => {
@@ -266,3 +268,5 @@ window.addEventListener('keydown', (event) => {
   }
 });
 // updated-all-files
+
+setStatus('Откройте папку или ZIP-архив с вашим сайтом, чтобы начать работу.');
