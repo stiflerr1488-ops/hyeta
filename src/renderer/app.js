@@ -234,6 +234,11 @@ async function loadProjectData(project) {
   }
 }
 
+
+window.editorApi.onProjectLoaded(async (project) => {
+  await loadProjectData(project);
+});
+
 refs.openProjectBtn.onclick = async () => {
   const project = await window.editorApi.openProject();
   await loadProjectData(project);

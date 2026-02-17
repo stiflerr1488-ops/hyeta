@@ -3,10 +3,13 @@ const fs = require('fs/promises');
 const path = require('path');
 const { buildProjectIndex, findInProject } = require('../shared/project-index');
 const { createExtractionDir, extractZipArchive } = require('./zip-import');
+const { isZipPath, extractZipPathFromArgv } = require('./open-zip-args');
 
 const APP_SCHEME = 'appfs';
 let currentProjectRoot = null;
 let appMenu = null;
+let pendingOpenZipPath = null;
+
 
 function normalizePath(projectRoot, relativePath) {
   const resolved = path.resolve(projectRoot, relativePath);
@@ -138,6 +141,31 @@ async function readUtf8(absolutePath) {
   return fs.readFile(absolutePath, 'utf8');
 }
 
+async function openZipProject(zipFilePath) {
+  const extractionDir = createExtractionDir(app.getPath('userData'), zipFilePath);
+  await extractZipArchive(zipFilePath, extractionDir);
+
+  currentProjectRoot = extractionDir;
+  const index = await buildProjectIndex(currentProjectRoot);
+  return {
+    projectRoot: currentProjectRoot,
+    sourceZip: zipFilePath,
+    ...index
+  };
+}
+
+async function openZipPathInWindow(zipFilePath) {
+  if (!isZipPath(zipFilePath)) return;
+  const win = getActiveWindow();
+  if (!win || win.isDestroyed()) {
+    pendingOpenZipPath = zipFilePath;
+    return;
+  }
+
+  const project = await openZipProject(zipFilePath);
+  win.webContents.send('project:loaded', project);
+}
+
 async function createMainWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -238,17 +266,7 @@ ipcMain.handle('project:open-zip', async (event) => {
     return null;
   }
 
-  const zipFilePath = result.filePaths[0];
-  const extractionDir = createExtractionDir(app.getPath('userData'), zipFilePath);
-  await extractZipArchive(zipFilePath, extractionDir);
-
-  currentProjectRoot = extractionDir;
-  const index = await buildProjectIndex(currentProjectRoot);
-  return {
-    projectRoot: currentProjectRoot,
-    sourceZip: zipFilePath,
-    ...index
-  };
+  return openZipProject(result.filePaths[0]);
 });
 
 ipcMain.handle('project:read-file', async (_event, relativePath) => {
@@ -281,7 +299,44 @@ app.whenReady().then(async () => {
   registerAppFsProtocol();
   lockDownPreviewNetwork();
   await createMainWindow();
+
+  const initialZipPath = pendingOpenZipPath || extractZipPathFromArgv(process.argv.slice(1));
+  if (initialZipPath) {
+    pendingOpenZipPath = null;
+    await openZipPathInWindow(initialZipPath);
+  }
 });
+
+app.on('open-file', async (event, filePath) => {
+  event.preventDefault();
+  if (!isZipPath(filePath)) return;
+
+  if (!app.isReady()) {
+    pendingOpenZipPath = filePath;
+    return;
+  }
+
+  await openZipPathInWindow(filePath);
+});
+
+const singleInstanceLock = app.requestSingleInstanceLock();
+if (!singleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', async (_event, argv) => {
+    const zipPath = extractZipPathFromArgv(argv.slice(1));
+    if (!zipPath) return;
+
+    const win = getActiveWindow();
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+
+    await openZipPathInWindow(zipPath);
+  });
+}
+
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
