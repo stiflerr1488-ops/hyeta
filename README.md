@@ -18,6 +18,90 @@
 - Поиск по проекту (по текстовым файлам).
 - Базовые ограничения безопасности превью.
 
+## Как ещё можно улучшить проект
+1. **Надёжность записи HTML:** добавить unit-тесты на кейсы пересборки DOM (сохранение doctype, спецсимволов, inline-скриптов).
+2. **Безопасность превью:** расширить изоляцию iframe (например, sandbox-флаги и более строгие проверки сообщений `postMessage`).
+3. **Производительность поиска:** кешировать дерево и индексировать содержимое инкрементально для больших проектов.
+4. **UX редактирования:** подсветка выбранного элемента в iframe и breadcrumb-путь DOM-узла.
+5. **Работа с ассетами:** визуальная замена изображений и предпросмотр до записи файла.
+6. **История изменений:** хранить undo/redo не только в памяти сессии, но и в локальном журнале проекта.
+7. **Диагностика:** добавить встроенную панель ошибок (читаемые сообщения для невалидного HTML, битых ссылок и пр.).
+8. **E2E-покрытие:** интеграционные тесты для полного сценария «импорт → правка → сохранение → перезапуск». 
+9. **Экспорт:** добавить UI для обратной упаковки проекта в ZIP прямо из приложения.
+10. **DX/релизы:** CI-пайплайн для автоматической проверки (`check`, `test`) и сборки release-архива.
+
+## Полный каталог функций проекта
+Ниже перечислены **все функции**, присутствующие в кодовой базе на текущий момент.
+
+### `src/shared/project-index.js`
+- `walk(root, relative = '')` — рекурсивный обход проекта, строит дерево директорий/файлов с фильтрацией по расширениям.
+- `collectHtmlFiles(tree, result = [])` — извлекает список HTML-файлов из дерева.
+- `buildProjectIndex(projectRoot)` — собирает объект индекса проекта (`tree`, `htmlPages`).
+- `findInProject(projectRoot, query)` — ищет текстовые вхождения по индексируемым текстовым файлам.
+
+### `src/main/zip-import.js`
+- `sanitizeBaseName(name)` — нормализует имя проекта для безопасного имени директории импорта.
+- `createExtractionDir(userDataPath, zipFilePath, now = Date.now())` — строит путь папки распаковки ZIP.
+- `extractZipArchive(zipFilePath, destinationDir)` — распаковывает ZIP (через PowerShell на Windows, через `unzip` на Unix).
+
+### `src/main/main.js`
+- `normalizePath(projectRoot, relativePath)` — защищает от выхода за пределы корня проекта.
+- `readUtf8(absolutePath)` — читает файл в UTF-8.
+- `createMainWindow()` — создаёт главное окно Electron и грузит UI.
+- `registerAppFsProtocol()` — регистрирует обработчик протокола `appfs://` для локального превью.
+- `lockDownPreviewNetwork()` — блокирует сетевые запросы превью ко всем схемам, кроме разрешённых.
+- IPC-обработчики:
+  - `project:open` — открытие директории проекта.
+  - `project:open-zip` — открытие ZIP и распаковка в рабочую папку.
+  - `project:read-file` — чтение файла проекта.
+  - `project:write-file` — запись файла проекта.
+  - `project:replace-asset` — замена файла-ассета.
+  - `project:search` — поиск по проекту.
+- Обработчики жизненного цикла приложения:
+  - `app.whenReady().then(...)` — старт протокола, сетевых ограничений и окна.
+  - `app.on('window-all-closed', ...)` — корректное завершение приложения.
+
+### `src/main/preload.js`
+- `openProject()` — прокси в `ipcRenderer.invoke('project:open')`.
+- `openProjectZip()` — прокси в `ipcRenderer.invoke('project:open-zip')`.
+- `readFile(relativePath)` — прокси в `project:read-file`.
+- `writeFile(relativePath, content)` — прокси в `project:write-file`.
+- `search(query)` — прокси в `project:search`.
+- `replaceAsset(payload)` — прокси в `project:replace-asset`.
+- `pickAssetFile()` — заглушка (сейчас возвращает `null`).
+
+### `src/renderer/app.js`
+- `setStatus(text)` — показывает временное статус-сообщение.
+- `renderTree(nodes, host)` — рендерит дерево файлов в sidebar.
+- `pushUndo(nextContent)` — добавляет шаг в undo-историю.
+- `loadPreview(relativeHtmlPath)` — обновляет iframe-превью страницы.
+- `loadPage(relativeHtmlPath)` — загружает HTML-страницу в текущую сессию редактора.
+- `instrumentPreviewDocument()` — внедряет скрипт перехвата клика по элементам внутри iframe.
+- `updateSelectionForm(payload)` — заполняет форму редактирования атрибутов/текста.
+- `applyElementChanges()` — применяет изменения выбранного DOM-элемента и сохраняет файл.
+- `saveCurrent()` — сохраняет текущую страницу.
+- `undo()` — отмена последнего изменения.
+- `redo()` — повтор последнего отменённого изменения.
+- `runProjectSearch()` — запускает поиск и выводит результат.
+- `loadProjectData(project)` — инициализирует UI данными открытого проекта.
+- UI-обработчики:
+  - `window.addEventListener('message', ...)` — принимает данные выбранного элемента из iframe.
+  - `refs.openProjectBtn.onclick` — открытие папки.
+  - `refs.openZipBtn.onclick` — открытие ZIP.
+  - `refs.pageSelect.onchange` — переключение страницы.
+  - `refs.applyBtn.onclick` — применение правок.
+  - `refs.saveBtn.onclick` — сохранение.
+  - `refs.undoBtn.onclick` — undo.
+  - `refs.redoBtn.onclick` — redo.
+  - `refs.searchBtn.onclick` — поиск.
+  - `refs.previewFrame.addEventListener('load', ...)` — повторная инструментализация iframe после загрузки.
+  - `window.addEventListener('keydown', ...)` — горячие клавиши (`Ctrl+S`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+F`).
+
+### `scripts/create_release_archive.py`
+- `should_skip(path: Path) -> bool` — проверяет, нужно ли исключить файл/папку из release-архива.
+- `collect_files() -> list[Path]` — собирает все файлы для архивирования.
+- `main() -> None` — создаёт ZIP-архив релиза в `dist/` и печатает статистику.
+
 ## Как запускать (Windows)
 1. Установить Node.js 20+.
 2. В корне проекта выполнить:
