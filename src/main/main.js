@@ -205,8 +205,10 @@ function lockDownPreviewNetwork() {
   });
 }
 
-ipcMain.handle('project:open', async () => {
-  const result = await dialog.showOpenDialog({
+ipcMain.handle('project:open', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Выберите папку с сайтом',
     properties: ['openDirectory']
   });
 
@@ -223,8 +225,11 @@ ipcMain.handle('project:open', async () => {
 });
 
 
-ipcMain.handle('project:open-zip', async () => {
-  const result = await dialog.showOpenDialog({
+ipcMain.handle('project:open-zip', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Выберите ZIP-архив с сайтом',
+    buttonLabel: 'Открыть архив',
     properties: ['openFile'],
     filters: [{ name: 'ZIP-архив', extensions: ['zip'] }]
   });
