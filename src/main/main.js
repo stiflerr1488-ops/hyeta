@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, session, Menu } = require('electron');
 const fs = require('fs/promises');
 const path = require('path');
 const { buildProjectIndex, findInProject } = require('../shared/project-index');
@@ -6,6 +6,7 @@ const { createExtractionDir, extractZipArchive } = require('./zip-import');
 
 const APP_SCHEME = 'appfs';
 let currentProjectRoot = null;
+let appMenu = null;
 
 function normalizePath(projectRoot, relativePath) {
   const resolved = path.resolve(projectRoot, relativePath);
@@ -13,6 +14,124 @@ function normalizePath(projectRoot, relativePath) {
     throw new Error('Путь выходит за пределы корня проекта');
   }
   return resolved;
+}
+
+
+function getActiveWindow() {
+  return BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null;
+}
+
+function triggerRendererAction(elementId) {
+  const win = getActiveWindow();
+  if (!win || win.isDestroyed()) return;
+  win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(elementId)})?.click();`);
+}
+
+function buildApplicationMenu() {
+  const template = [
+    {
+      label: 'Файл',
+      submenu: [
+        {
+          label: 'Открыть папку с сайтом',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => triggerRendererAction('openProjectBtn')
+        },
+        {
+          label: 'Открыть ZIP-архив',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: () => triggerRendererAction('openZipBtn')
+        },
+        { type: 'separator' },
+        {
+          label: 'Сохранить',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => triggerRendererAction('saveBtn')
+        },
+        { type: 'separator' },
+        { label: 'Выход', role: 'quit' }
+      ]
+    },
+    {
+      label: 'Правка',
+      submenu: [
+        {
+          label: 'Отменить',
+          accelerator: 'CmdOrCtrl+Z',
+          click: () => triggerRendererAction('undoBtn')
+        },
+        {
+          label: 'Повторить',
+          accelerator: 'CmdOrCtrl+Y',
+          click: () => triggerRendererAction('redoBtn')
+        },
+        { type: 'separator' },
+        { role: 'cut', label: 'Вырезать' },
+        { role: 'copy', label: 'Копировать' },
+        { role: 'paste', label: 'Вставить' },
+        { role: 'selectAll', label: 'Выделить всё' }
+      ]
+    },
+    {
+      label: 'Вид',
+      submenu: [
+        { role: 'reload', label: 'Перезагрузить' },
+        { role: 'forceReload', label: 'Полная перезагрузка' },
+        { role: 'toggleDevTools', label: 'Инструменты разработчика' },
+        { type: 'separator' },
+        { role: 'resetZoom', label: 'Сброс масштаба' },
+        { role: 'zoomIn', label: 'Увеличить' },
+        { role: 'zoomOut', label: 'Уменьшить' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: 'Полный экран' }
+      ]
+    },
+    {
+      label: 'Справка',
+      submenu: [
+        {
+          label: 'О программе',
+          click: () => {
+            const win = getActiveWindow();
+            dialog.showMessageBox(win, {
+              type: 'info',
+              title: 'О программе',
+              message: 'Hyeta — визуальный редактор сайта',
+              detail: 'Откройте папку или ZIP-архив и редактируйте страницы визуально.'
+            });
+          }
+        }
+      ]
+    }
+  ];
+
+  if (process.platform === 'darwin') {
+    template.unshift({
+      label: app.name,
+      submenu: [
+        { role: 'about', label: 'О программе' },
+        { type: 'separator' },
+        { role: 'quit', label: 'Выход' }
+      ]
+    });
+  }
+
+  return Menu.buildFromTemplate(template);
+}
+
+function registerApplicationMenu() {
+  appMenu = buildApplicationMenu();
+  Menu.setApplicationMenu(appMenu);
+}
+
+function applyWindowMenu(win) {
+  if (!win || win.isDestroyed()) return;
+  if (!appMenu) {
+    appMenu = buildApplicationMenu();
+  }
+
+  win.setMenu(appMenu);
+  win.setMenuBarVisibility(true);
 }
 
 async function readUtf8(absolutePath) {
@@ -23,6 +142,7 @@ async function createMainWindow() {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
+    title: 'Hyeta — визуальный редактор',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -32,7 +152,9 @@ async function createMainWindow() {
     }
   });
 
+  applyWindowMenu(win);
   await win.loadFile(path.join(__dirname, '../renderer/index.html'));
+  applyWindowMenu(win);
 }
 
 function registerAppFsProtocol() {
@@ -149,6 +271,8 @@ ipcMain.handle('project:search', async (_event, query) => {
 });
 
 app.whenReady().then(async () => {
+  app.setName('Hyeta визуальный редактор');
+  registerApplicationMenu();
   registerAppFsProtocol();
   lockDownPreviewNetwork();
   await createMainWindow();
