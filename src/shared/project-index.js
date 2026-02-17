@@ -90,3 +90,4 @@ module.exports = {
   findInProject,
   collectHtmlFiles
 };
+// updated-all-files

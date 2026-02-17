@@ -23,3 +23,4 @@
 - Плагинные «фишки» с reversible patch preview.
 - История между сессиями.
 - Опциональная Git интеграция.
+<!-- updated-all-files -->

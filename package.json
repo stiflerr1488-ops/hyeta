@@ -12,5 +12,6 @@
   },
   "devDependencies": {
     "electron": "^31.0.0"
-  }
+  },
+  "_updated_all_files_marker": "updated-all-files"
 }
