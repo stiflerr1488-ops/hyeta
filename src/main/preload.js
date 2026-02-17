@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld('editorApi', {
   pickAssetFile: async () => {
     // no native dialog in preload for now, renderer uses input type=file
     return null;
+  },
+  onProjectLoaded: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, project) => callback(project);
+    ipcRenderer.on('project:loaded', listener);
+    return () => ipcRenderer.removeListener('project:loaded', listener);
   }
 });
 // updated-all-files

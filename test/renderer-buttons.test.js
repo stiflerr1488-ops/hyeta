@@ -93,6 +93,7 @@ test('toolbar buttons are wired and invoke expected editor API calls', async () 
     },
     replaceAsset: async () => ({ ok: true }),
     pickAssetFile: async () => null,
+    onProjectLoaded: () => () => {},
   };
 
   global.document = fixture.document;
