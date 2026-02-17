@@ -137,6 +137,7 @@ async function createMainWindow() {
   });
 
   await win.loadFile(path.join(__dirname, '../renderer/index.html'));
+  registerApplicationMenu(win);
 }
 
 function registerAppFsProtocol() {
