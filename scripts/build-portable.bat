@@ -24,4 +24,5 @@ if not "%EXIT_CODE%"=="0" (
 
 echo.
 echo [OK] Portable build finished successfully.
+echo Portable .exe is now in the project root folder.
 pause

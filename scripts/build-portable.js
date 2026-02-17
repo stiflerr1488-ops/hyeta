@@ -8,31 +8,11 @@ const distDir = path.join(rootDir, 'dist');
 const portablePattern = /^hyeta-visual-editor .*\.exe$/i;
 const buildArgs = ['electron-builder', '--win', 'portable', '--x64'];
 
-function removeOldPortableBuilds() {
-  if (!fs.existsSync(distDir)) {
-    return;
-  }
-
-  const entries = fs.readdirSync(distDir, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isFile()) {
-      continue;
-    }
-
-    if (!portablePattern.test(entry.name)) {
-      continue;
-    }
-
-    fs.rmSync(path.join(distDir, entry.name), { force: true });
-    console.log(`Removed old portable build: ${entry.name}`);
-  }
-}
-
 function runCommand(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: rootDir,
     stdio: 'inherit',
-    shell: process.platform === 'win32' ? true : false,
+    shell: process.platform === 'win32',
     ...options
   });
 
@@ -41,6 +21,24 @@ function runCommand(command, args, options = {}) {
   }
 
   return { ok: result.status === 0, status: result.status ?? 1 };
+}
+
+function listPortableFiles(directory) {
+  if (!fs.existsSync(directory)) {
+    return [];
+  }
+
+  return fs
+    .readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && portablePattern.test(entry.name))
+    .map((entry) => path.join(directory, entry.name));
+}
+
+function removePortableFiles(files) {
+  for (const filePath of files) {
+    fs.rmSync(filePath, { force: true });
+    console.log(`Removed old portable build: ${path.basename(filePath)}`);
+  }
 }
 
 function buildPortable() {
@@ -68,5 +66,24 @@ function buildPortable() {
   }
 }
 
-removeOldPortableBuilds();
+function movePortableToRoot() {
+  const distPortableFiles = listPortableFiles(distDir);
+  if (distPortableFiles.length === 0) {
+    throw new Error('Portable .exe was not found in dist after build.');
+  }
+
+  const latestPortable = distPortableFiles
+    .map((filePath) => ({
+      filePath,
+      mtimeMs: fs.statSync(filePath).mtimeMs
+    }))
+    .sort((a, b) => b.mtimeMs - a.mtimeMs)[0].filePath;
+
+  const targetPath = path.join(rootDir, path.basename(latestPortable));
+  fs.renameSync(latestPortable, targetPath);
+  console.log(`Portable build moved to project root: ${path.basename(targetPath)}`);
+}
+
+removePortableFiles([...listPortableFiles(distDir), ...listPortableFiles(rootDir)]);
 buildPortable();
+movePortableToRoot();
