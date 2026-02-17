@@ -1,7 +1,7 @@
 {
   "name": "hyeta-visual-editor",
   "version": "0.1.0",
-  "description": "Desktop visual editor MVP for multipage HTML sites",
+  "description": "MVP десктопного визуального редактора для многостраничных HTML-сайтов",
   "main": "src/main/main.js",
   "type": "commonjs",
   "scripts": {
