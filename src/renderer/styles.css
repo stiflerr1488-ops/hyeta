@@ -150,3 +150,38 @@ pre {
   padding: 8px;
   border-radius: 10px;
 }
+
+
+.projectBadge {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #2e4b9b;
+  font-size: 12px;
+  border: 1px solid #cdddff;
+  white-space: nowrap;
+}
+
+.sidebar h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.sidebarHint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#fileTree {
+  padding-bottom: 8px;
+}
+
+#searchInput {
+  min-width: 220px;
+  background: #f8faff;
+}
+
+.properties h3 {
+  margin-top: 0;
+}
