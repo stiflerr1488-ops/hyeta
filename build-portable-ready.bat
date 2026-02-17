@@ -13,16 +13,16 @@ if errorlevel 1 (
 
 if not exist node_modules (
   echo node_modules not found. Running npm install first...
+  npm install
+  if errorlevel 1 (
+    echo.
+    echo [ERROR] npm install failed with exit code %ERRORLEVEL%.
+    pause
+    exit /b %ERRORLEVEL%
+  )
 ) else (
-  echo node_modules found. Running npm install check/update...
-)
-
-npm install
-if errorlevel 1 (
-  echo.
-  echo [ERROR] npm install failed with exit code %ERRORLEVEL%.
-  pause
-  exit /b %ERRORLEVEL%
+  echo node_modules found. Skipping npm install for faster build.
+  echo If dependencies changed, run npm-install.bat manually.
 )
 
 echo.
@@ -31,6 +31,7 @@ node scripts\build-portable.js
 if errorlevel 1 (
   echo.
   echo [ERROR] Portable build failed with exit code %ERRORLEVEL%.
+  echo Make sure previously built portable .exe is closed, then retry.
   pause
   exit /b %ERRORLEVEL%
 )
