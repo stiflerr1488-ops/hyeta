@@ -207,7 +207,10 @@ window.addEventListener('message', (event) => {
 });
 
 async function loadProjectData(project) {
-  if (!project) return;
+  if (!project) {
+    setStatus('Открытие отменено');
+    return;
+  }
   state.project = project;
   renderTree(project.tree, refs.fileTree);
 
@@ -222,6 +225,9 @@ async function loadProjectData(project) {
   if (project.htmlPages[0]) {
     refs.pageSelect.value = project.htmlPages[0];
     await loadPage(project.htmlPages[0]);
+  } else {
+    refs.previewFrame.removeAttribute('src');
+    setStatus('Проект открыт, но HTML-страницы не найдены');
   }
 
   const sourceLabel = project.sourceZip
@@ -231,6 +237,15 @@ async function loadProjectData(project) {
 
   if (project.sourceZip) {
     setStatus(`ZIP распакован: ${project.sourceZip}`);
+  }
+}
+
+async function safelyOpenProject(opener) {
+  try {
+    const project = await opener();
+    await loadProjectData(project);
+  } catch (error) {
+    setStatus(`Не удалось открыть проект: ${error?.message || 'неизвестная ошибка'}`);
   }
 }
 
@@ -276,13 +291,11 @@ window.addEventListener('drop', async (event) => {
 });
 
 refs.openProjectBtn.onclick = async () => {
-  const project = await window.editorApi.openProject();
-  await loadProjectData(project);
+  await safelyOpenProject(() => window.editorApi.openProject());
 };
 
 refs.openZipBtn.onclick = async () => {
-  const project = await window.editorApi.openProjectZip();
-  await loadProjectData(project);
+  await safelyOpenProject(() => window.editorApi.openProjectZip());
 };
 
 refs.pageSelect.onchange = () => loadPage(refs.pageSelect.value);
