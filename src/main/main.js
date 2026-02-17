@@ -16,12 +16,17 @@ function normalizePath(projectRoot, relativePath) {
 }
 
 
-function triggerRendererAction(win, elementId) {
+function getActiveWindow() {
+  return BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null;
+}
+
+function triggerRendererAction(elementId) {
+  const win = getActiveWindow();
   if (!win || win.isDestroyed()) return;
   win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(elementId)})?.click();`);
 }
 
-function registerApplicationMenu(win) {
+function registerApplicationMenu() {
   const template = [
     {
       label: 'Файл',
@@ -29,18 +34,18 @@ function registerApplicationMenu(win) {
         {
           label: 'Открыть папку с сайтом',
           accelerator: 'CmdOrCtrl+O',
-          click: () => triggerRendererAction(win, 'openProjectBtn')
+          click: () => triggerRendererAction('openProjectBtn')
         },
         {
           label: 'Открыть ZIP-архив',
           accelerator: 'CmdOrCtrl+Shift+O',
-          click: () => triggerRendererAction(win, 'openZipBtn')
+          click: () => triggerRendererAction('openZipBtn')
         },
         { type: 'separator' },
         {
           label: 'Сохранить',
           accelerator: 'CmdOrCtrl+S',
-          click: () => triggerRendererAction(win, 'saveBtn')
+          click: () => triggerRendererAction('saveBtn')
         },
         { type: 'separator' },
         { label: 'Выход', role: 'quit' }
@@ -52,12 +57,12 @@ function registerApplicationMenu(win) {
         {
           label: 'Отменить',
           accelerator: 'CmdOrCtrl+Z',
-          click: () => triggerRendererAction(win, 'undoBtn')
+          click: () => triggerRendererAction('undoBtn')
         },
         {
           label: 'Повторить',
           accelerator: 'CmdOrCtrl+Y',
-          click: () => triggerRendererAction(win, 'redoBtn')
+          click: () => triggerRendererAction('redoBtn')
         },
         { type: 'separator' },
         { role: 'cut', label: 'Вырезать' },
@@ -86,6 +91,7 @@ function registerApplicationMenu(win) {
         {
           label: 'О программе',
           click: () => {
+            const win = getActiveWindow();
             dialog.showMessageBox(win, {
               type: 'info',
               title: 'О программе',
@@ -249,6 +255,7 @@ ipcMain.handle('project:search', async (_event, query) => {
 
 app.whenReady().then(async () => {
   app.setName('Hyeta визуальный редактор');
+  registerApplicationMenu();
   registerAppFsProtocol();
   lockDownPreviewNetwork();
   await createMainWindow();
