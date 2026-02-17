@@ -8,8 +8,12 @@
 </head>
 <body>
   <header class="toolbar">
-    <button id="openProjectBtn">Открыть папку</button>
-    <button id="openZipBtn">Открыть ZIP</button>
+    <div class="brand">
+      <strong>Hyeta</strong>
+      <span>Визуальный редактор сайта</span>
+    </div>
+    <button id="openProjectBtn">Открыть папку с сайтом</button>
+    <button id="openZipBtn">Открыть ZIP-архив</button>
     <button id="saveBtn">Сохранить (Ctrl+S)</button>
     <button id="undoBtn">Отменить</button>
     <button id="redoBtn">Повторить</button>
@@ -21,6 +25,14 @@
   <main class="layout">
     <aside class="sidebar" id="fileTree"></aside>
     <section class="previewPane">
+      <div class="helperCard">
+        <h3>Как открыть свой сайт</h3>
+        <ol>
+          <li>Нажмите <b>«Открыть папку с сайтом»</b> и выберите папку, где лежит ваш <code>index.html</code>.</li>
+          <li>Если сайт у вас в архиве — нажмите <b>«Открыть ZIP-архив»</b>.</li>
+          <li>Выберите страницу в списке ниже и редактируйте элементы кликом по превью.</li>
+        </ol>
+      </div>
       <div class="pagePicker">
         <label for="pageSelect">Страница:</label>
         <select id="pageSelect"></select>
@@ -28,25 +40,25 @@
       <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
     </section>
     <aside class="properties">
-      <h3>Свойства</h3>
+      <h3>Свойства выбранного элемента</h3>
       <div class="field">
         <label>Текст</label>
         <textarea id="textValue" rows="6"></textarea>
       </div>
       <div class="field">
-        <label>href</label>
+        <label>Ссылка (href)</label>
         <input id="attrHref" />
       </div>
       <div class="field">
-        <label>src</label>
+        <label>Источник (src)</label>
         <input id="attrSrc" />
       </div>
       <div class="field">
-        <label>alt</label>
+        <label>Описание (alt)</label>
         <input id="attrAlt" />
       </div>
       <div class="field">
-        <label>title</label>
+        <label>Подсказка (title)</label>
         <input id="attrTitle" />
       </div>
       <button id="applyBtn">Применить к элементу</button>
@@ -58,4 +70,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-<!-- updated-all-files -->
